@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>待办事项</title>
+    <link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="/js/ajax.js"></script>
+    <script src="/js/template-web.js"></script>
+</head>
+
+<body>
+    <h2>待办事项</h2>
+    <div style="width:600px">
+        <div class="form-group">
+            <input class="form-control" type="text" id="input" placeholder="请输入代办事项" />
+        </div>
+        <section id="main"></section>
+    </div>
+</body>
+
+</html>
+<script type="text/html" id="tpl">
+    <ul class="list-group">
+        {{each tasks}}
+        <li class="list-group-item" data-id="{{@$value._id}}">
+            <input onclick="changeState(event)" type="checkbox" {{$value.state? "checked": ""}}> {{if $value.state}}
+            <del>{{$value.title}}</del> {{else}} {{$value.title}} {{/if}}
+            <span onclick="handleDel(event)" style="float: right" class="glyphicon glyphicon-remove"></span>
+        </li>
+        {{/each}}
+        <li class="list-group-item">
+            <span>合计：{{tasks.length}}</span>
+            <span>已完成：{{completed}}</span>
+        </li>
+    </ul>
+</script>
+<script type="text/javascript">
+    var $input = document.getElementById('input');
+    var $main = document.getElementById('main');
+
+    getTasks()
+        // 添加待办事项
+    $input.onkeydown = function(e) {
+        if (e.keyCode == 13) {
+            ajax({
+                url: 'todo/add',
+                data: {
+                    title: $input.value
+                },
+                success: function(params) {
+                    getTasks()
+                    $input.value = ''
+                },
+                error: function(res) {
+                    alert(res.msg.message)
+                }
+            })
+        }
+    }
+
+    // 获取列表
+    function getTasks() {
+        ajax({
+            url: 'todo/todos',
+            success: function(res) {
+                render(res.data)
+            }
+        })
+    }
+
+    // 渲染试图
+    function render(data) {
+        var html = template('tpl', {
+            tasks: data,
+            completed: data.filter(x => x.state).length
+        })
+        $main.innerHTML = html;
+    }
+
+    // 改变状态
+    function changeState(e) {
+        var $target = e.target
+        ajax({
+            type: 'post',
+            url: 'todo/modify',
+            data: {
+                state: $target.checked,
+                id: $target.closest('li').getAttribute('data-id')
+            },
+            success: function() {
+                getTasks()
+            },
+            error: function(res) {
+                alert(res.msg.message)
+            }
+        })
+    }
+
+    function handleDel(e) {
+        var $target = e.target
+        ajax({
+            type: 'get',
+            url: 'todo/delete',
+            data: {
+                id: $target.closest('li').getAttribute('data-id')
+            },
+            success: function() {
+                getTasks()
+            },
+            error: function(res) {
+                alert(res.msg.message)
+            }
+        })
+    }
+</script>
